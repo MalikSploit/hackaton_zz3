@@ -1,64 +1,88 @@
-<div *ngIf="!mode" class="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-8">
-  <h3 class="text-2xl font-semibold text-gray-800">Quel est votre mode de transport ?</h3>
+<div *ngIf="mode === null" class="flex flex-col items-center justify-center min-h-[60vh] space-y-8 px-4">
+  <h3 class="text-3xl font-bold text-gray-800 text-center">
+    Quel est votre mode de transport&nbsp;?
+  </h3>
   <div class="flex flex-wrap justify-center gap-6">
     <button
-      *ngFor="let transport of transportModes"
-      (click)="selectMode(transport)"
-      class="flex items-center gap-2 px-6 py-3 text-white rounded-xl text-lg font-medium transition"
+      *ngFor="let m of transportModes"
+      (click)="selectMode(m)"
+      class="flex items-center gap-2 px-8 py-4 text-white rounded-2xl text-lg font-semibold shadow-lg transition transform hover:-translate-y-1"
       [ngClass]="{
-        'bg-green-600 hover:bg-green-700': transport === TransportMode.WALK,
-        'bg-blue-600 hover:bg-blue-700': transport === TransportMode.BIKE
+        'bg-green-600 hover:bg-green-700': m === TransportMode.WALK,
+        'bg-blue-600 hover:bg-blue-700': m === TransportMode.BIKE
       }"
     >
-      <fa-icon [icon]="TRANSPORT_CONFIG[transport].icon" class="text-xl"></fa-icon>
-      {{ TRANSPORT_CONFIG[transport].label }}
+      <fa-icon [icon]="TRANSPORT_CONFIG[m].icon" class="text-2xl"></fa-icon>
+      {{ TRANSPORT_CONFIG[m].label }}
     </button>
   </div>
 </div>
 
-<div *ngIf="mode && currentConfig" class="p-4 flex flex-col items-center space-y-6">
-  <!-- Infos trajet -->
-  <div class="flex flex-wrap items-center justify-center gap-4">
-    <div class="bg-white border border-gray-200 shadow px-5 py-2 rounded-md flex items-center gap-2 text-blue-800 text-sm font-medium">
-      <fa-icon [icon]="faMapMarker" class="text-blue-600"></fa-icon>
-      <span>{{ (totalDistance / 1000) | number: '1.2-2' }} km parcourus</span>
+<div *ngIf="mode !== null" class="flex flex-col h-full w-full">
+
+  <div class="mx-auto mt-4 w-full max-w-5xl bg-white bg-opacity-90 backdrop-blur-md rounded-xl shadow-lg p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+    <div class="flex flex-1 justify-evenly">
+      <div class="flex flex-col items-center text-center">
+        <fa-icon [icon]="faMapMarker" class="text-indigo-600 text-3xl"></fa-icon>
+        <span class="mt-1 text-xl font-bold">{{ (totalDistance/1000) | number:'1.2-2' }}</span>
+        <small class="text-gray-500">km parcourus</small>
+      </div>
+      <div class="flex flex-col items-center text-center">
+        <fa-icon [icon]="faRoad" class="text-gray-600 text-3xl"></fa-icon>
+        <span class="mt-1 text-xl font-bold">{{ ((estimatedDistance - totalDistance)/1000) | number:'1.2-2' }}</span>
+        <small class="text-gray-500">km restants</small>
+      </div>
+      <div class="flex flex-col items-center text-center">
+        <fa-icon [icon]="currentConfig.icon" class="text-3xl"></fa-icon>
+        <span class="mt-1 text-xl font-bold">{{ currentConfig.label }}</span>
+      </div>
+      <div class="flex flex-col items-center text-center">
+        <fa-icon [icon]="faCoins" class="text-yellow-500 text-3xl"></fa-icon>
+        <span class="mt-1 text-xl font-bold">{{ minedAmount | number:'1.2-2' }}</span>
+        <small class="text-gray-500">ISIMA</small>
+      </div>
     </div>
-    <div class="bg-white border border-gray-200 shadow px-5 py-2 rounded-md flex items-center gap-2 text-gray-800 text-sm font-medium">
-      <fa-icon [icon]="currentConfig.icon" class="text-lg"></fa-icon>
-      <span>{{ currentConfig.label }}</span>
-    </div>
-    <div *ngIf="tracking" class="bg-white border border-gray-200 shadow px-5 py-2 rounded-md flex items-center gap-2 text-green-700 text-sm font-medium">
-      <fa-icon [icon]="faCoins"></fa-icon>
-      <span>{{ minedAmount | number: '1.2-2' }} ISIMA</span>
+
+    <div class="flex flex-col items-center space-y-1">
+      <span class="text-sm font-medium">Vitesse : <strong>{{ speed | number:'1.1-1' }} km/h</strong></span>
+      <input
+        type="range"
+        class="w-48 accent-indigo-600"
+        [(ngModel)]="speed"
+        [min]="1"
+        [max]="currentConfig.speedLimit * 3.6"
+        step="0.5"
+      />
     </div>
   </div>
 
-  <div *ngIf="destination" class="flex items-center gap-4 text-sm text-gray-700">
-    <span>Distance estimée : {{ (estimatedDistance / 1000) | number: '1.2-2' }} km</span>
-    <span class="text-green-600 font-semibold">≈ {{ estimatedCrypto | number: '1.2-2' }} ISIMA</span>
-  </div>
+  <div id="map" class="flex-1 w-full mt-4 rounded-xl overflow-hidden shadow-xl"></div>
 
-  <div class="relative w-full max-w-5xl rounded-xl overflow-hidden shadow border border-gray-300">
-    <div id="map" class="w-full h-[500px]"></div>
-  </div>
-
-  <div class="flex gap-4">
+  <div class="mt-4 bg-white bg-opacity-90 backdrop-blur-md rounded-xl shadow-lg p-4 flex justify-center gap-6 mx-auto max-w-5xl">
     <button
-      *ngIf="!tracking"
-      (click)="startTrip()"
-      class="bg-indigo-600 text-white px-5 py-3 rounded-md shadow hover:bg-indigo-700 transition text-lg font-semibold flex items-center gap-2"
+      *ngIf="!isSimulating"
+      (click)="startSimulation()"
+      class="bg-indigo-600 text-white px-6 py-3 rounded-full text-lg font-semibold flex items-center gap-2 hover:bg-indigo-700 transition"
     >
       <fa-icon [icon]="faPlayCircle"></fa-icon>
-      Démarrer un trajet
+      Démarrer
     </button>
 
     <button
-      *ngIf="tracking"
-      (click)="stopTrip()"
-      class="bg-red-600 text-white px-5 py-3 rounded-md shadow hover:bg-red-700 transition text-lg font-semibold flex items-center gap-2"
+      *ngIf="isSimulating"
+      (click)="stopSimulation()"
+      class="bg-red-600 text-white px-6 py-3 rounded-full text-lg font-semibold flex items-center gap-2 hover:bg-red-700 transition"
     >
       <fa-icon [icon]="faStopCircle"></fa-icon>
-      Arrêter le trajet
+      Arrêter
+    </button>
+
+    <button
+      (click)="newTrip()"
+      class="bg-gray-600 text-white px-6 py-3 rounded-full text-lg font-semibold flex items-center gap-2 hover:bg-gray-700 transition"
+    >
+      <fa-icon [icon]="faRedo"></fa-icon>
+      Nouveau trajet
     </button>
   </div>
 </div>

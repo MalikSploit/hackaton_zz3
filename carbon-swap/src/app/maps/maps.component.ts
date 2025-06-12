@@ -1,233 +1,284 @@
-import {
-  Component,
-  OnInit,
-  OnDestroy,
-} from '@angular/core';
+import { Component, OnInit, OnDestroy } from '@angular/core';
 import {
   faBicycle,
   faCoins,
   faMapMarkerAlt,
   faPlayCircle,
   faStopCircle,
-  faWalking
+  faWalking,
+  faRedoAlt, faRoad,
 } from '@fortawesome/free-solid-svg-icons';
-import * as L from 'leaflet';
-import 'leaflet-routing-machine';
-
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
-import { EthersService } from '../wallet/ethers.service';
-import { GeolocationService } from '../mocks/geolocation.service';
-import { Subscription } from 'rxjs';
+import * as L from 'leaflet';
+(window as any).L = L;
+import 'leaflet-routing-machine';
 
 export enum TransportMode {
   WALK = 'walk',
   BIKE = 'bike',
 }
 
-export const TRANSPORT_CONFIG: Record<TransportMode, {
-  label: string;
-  icon: IconDefinition;
-  color: string;
-  speedLimit: number;
-}> = {
+export const TRANSPORT_CONFIG: Record<
+  TransportMode,
+  { label: string; icon: IconDefinition; color: string; speedLimit: number }
+> = {
   [TransportMode.WALK]: {
     label: 'À pied',
     icon: faWalking,
     color: 'green',
-    speedLimit: 2.5,
+    speedLimit: 1.8,
   },
   [TransportMode.BIKE]: {
     label: 'À vélo',
     icon: faBicycle,
     color: 'blue',
-    speedLimit: 8,
+    speedLimit: 10,
   },
 };
 
 @Component({
   selector: 'app-maps',
   templateUrl: './maps.component.html',
-  styleUrls: ['./maps.component.css']
+  styleUrls: ['./maps.component.css'],
 })
 export class MapsComponent implements OnInit, OnDestroy {
-  faMapMarker = faMapMarkerAlt;
-  faCoins = faCoins;
+  faMapMarker  = faMapMarkerAlt;
+  faCoins      = faCoins;
   faPlayCircle = faPlayCircle;
   faStopCircle = faStopCircle;
+  faRedo       = faRedoAlt;
 
   mode: TransportMode | null = null;
-  transportModes : TransportMode[] = Object.values(TransportMode);
+  transportModes: TransportMode[] = Object.values(TransportMode);
   TRANSPORT_CONFIG = TRANSPORT_CONFIG;
   TransportMode = TransportMode;
 
   map!: L.Map;
-  currentPosition!: [number, number];
-  destination!: [number, number];
   routingControl: any;
+  startPoint: [number, number] | null = null;
+  destination: [number, number] | null = null;
+  routeCoords: L.LatLng[] = [];
 
-  tracking = false;
-  totalDistance = 0;
-  minedAmount = 0;
+  estimatedDistance = 0;  // en mètres
 
-  // Subscription to mock geolocation
-  watchSubscription?: Subscription;
+  positionMarker: L.Marker | null = null;
+  pathPolyline:  L.Polyline | null = null;
+  pathLatLngs:   L.LatLng[] = [];
 
-  estimatedDistance = 0;
-  estimatedCrypto = 0;
+  speed = 4;               // km/h
+  simInterval: any = null;
+  private simIndex = 0;
+  private segRemaining = 0;
 
-  constructor(
-    private ethersService: EthersService,
-    private mockGeo: GeolocationService
-  ) {}
+  totalDistance = 0;       // mètres
+  minedAmount   = 0;       // ISIMA
+
+  constructor() {}
 
   ngOnInit(): void {}
 
   ngOnDestroy(): void {
-    if (this.watchSubscription) {
-      this.watchSubscription.unsubscribe();
-      this.watchSubscription = undefined;
-    }
-    if (this.routingControl) {
-      this.map.removeControl(this.routingControl);
-    }
+    this.stopSimulation();
+    this.routingControl && this.map.removeControl(this.routingControl);
+    this.map.remove();
   }
 
   get currentConfig() {
-    return this.mode ? this.TRANSPORT_CONFIG[this.mode] : this.TRANSPORT_CONFIG[TransportMode.WALK];
+    return this.mode
+      ? this.TRANSPORT_CONFIG[this.mode]
+      : this.TRANSPORT_CONFIG[TransportMode.WALK];
+  }
+
+  get isSimulating() {
+    return this.simInterval != null;
   }
 
   selectMode(mode: TransportMode): void {
     this.mode = mode;
-    this.initMap();
+    setTimeout(() => this.initMap(), 0);
   }
 
-  initMap(): void {
-    navigator.geolocation.getCurrentPosition((pos) => {
-      this.currentPosition = [pos.coords.latitude, pos.coords.longitude];
-      this.map = L.map('map').setView(this.currentPosition, 15);
+  private initMap(): void {
+    this.map = L.map('map').setView([46.6, 2.5], 6);
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: '© OpenStreetMap',
+    }).addTo(this.map);
 
-      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-        attribution: 'Map data © OpenStreetMap contributors'
-      }).addTo(this.map);
-
-      const startMarker = L.marker(this.currentPosition, {
-        icon: L.icon({
-          iconUrl: 'assets/marker.png',
-          iconSize: [30, 40],
-          iconAnchor: [15, 40],
-        })
-      }).addTo(this.map).bindPopup('<b>Point de départ</b>').openPopup();
-
-      this.map.on('click', (e: L.LeafletMouseEvent) => {
-        this.destination = [e.latlng.lat, e.latlng.lng];
-        this.drawRoute(this.currentPosition, this.destination);
-      });
+    this.map.on('click', (e: L.LeafletMouseEvent) => {
+      const { lat, lng } = e.latlng;
+      if (!this.startPoint) {
+        this.setStart([lat, lng]);
+      } else if (!this.destination) {
+        this.setDestination([lat, lng]);
+        this.drawRoute();
+      } else {
+        this.resetAll();
+        this.setStart([lat, lng]);
+      }
     });
   }
 
-  drawRoute(from: [number, number], to: [number, number]) {
-    if (this.routingControl) this.map.removeControl(this.routingControl);
+  private setStart(pt: [number, number]) {
+    this.startPoint = pt;
+    this.positionMarker && this.map.removeLayer(this.positionMarker);
+    this.positionMarker = L.marker(pt, {
+      icon: L.icon({
+        iconUrl: 'assets/marker-start.png',
+        iconSize: [30, 40],
+        iconAnchor: [15, 40],
+      }),
+    })
+      .addTo(this.map)
+      .bindPopup('Départ')
+      .openPopup();
+  }
+
+  private setDestination(pt: [number, number]) {
+    this.destination = pt;
+    L.marker(pt, {
+      icon: L.icon({
+        iconUrl: 'assets/marker.png',
+        iconSize: [30, 40],
+        iconAnchor: [15, 40],
+      }),
+    })
+      .addTo(this.map)
+      .bindPopup('Destination')
+      .openPopup();
+  }
+
+  private drawRoute() {
+    if (!this.startPoint || !this.destination) return;
+    this.routingControl && this.map.removeControl(this.routingControl);
 
     this.routingControl = (L as any).Routing.control({
       waypoints: [
-        L.latLng(from[0], from[1]),
-        L.latLng(to[0], to[1])
+        L.latLng(...this.startPoint),
+        L.latLng(...this.destination),
       ],
-      lineOptions: {
-        styles: [{ color: '#6366f1', weight: 6, opacity: 0.8 }],
-      },
-      routeWhileDragging: false,
+      lineOptions: { styles: [{ color: '#6366f1', weight: 6, opacity: 0.8 }] },
       addWaypoints: false,
       show: false,
-      createMarker: (i: number, wp: any) => {
-        return L.marker(wp.latLng, {
-          icon: L.icon({
-            iconUrl: i === 0 ? 'assets/marker-start.png' : 'assets/marker.png',
-            iconSize: [30, 40],
-            iconAnchor: [15, 40],
-          })
-        }).bindPopup(i === 0 ? '<b>Départ</b>' : '<b>Destination</b>');
-      }
+    })
+      .addTo(this.map)
+      .on('routesfound', (e: any) => {
+        this.routeCoords = e.routes[0].coordinates;
+        this.estimatedDistance = e.routes[0].summary.totalDistance;
+      });
+  }
+
+  startSimulation(): void {
+    if (!this.startPoint || !this.destination || this.routeCoords.length === 0) {
+      alert('Posez d’abord un départ puis une destination.');
+      return;
+    }
+    this.stopSimulation();
+
+    this.totalDistance = 0;
+    this.minedAmount   = 0;
+    this.simIndex      = 0;
+    this.segRemaining  = 0;
+
+    this.pathLatLngs = [L.latLng(...this.startPoint)];
+    this.pathPolyline && this.map.removeLayer(this.pathPolyline);
+    this.pathPolyline = L.polyline(this.pathLatLngs, {
+      color: this.currentConfig.color,
+      weight: 5,
+      opacity: 0.7,
     }).addTo(this.map);
 
-    this.estimatedDistance = this.computeDistance(from, to);
-    this.estimatedCrypto = this.calculateCrypto(this.estimatedDistance);
-  }
+    this.positionMarker!.setLatLng(this.startPoint);
 
-  async startTrip(): Promise<void> {
-    this.tracking = true;
-    this.totalDistance = 0;
-    this.minedAmount = 0;
-    let lastPosition = this.currentPosition;
-    let lastTime = Date.now();
+    const tick = 1000;
+    this.simInterval = setInterval(() => {
+      const speedMs = this.speed / 3.6;
+      if (speedMs > this.currentConfig.speedLimit) return;
 
-    this.watchSubscription = this.mockGeo.watchPosition().subscribe(async (pos) => {
-      const currentTime = Date.now();
-      const current = [pos.coords.latitude, pos.coords.longitude] as [number, number];
-
-      if (lastPosition === null || lastTime === null) {
-        lastPosition = current;
-        lastTime = currentTime;
+      if (this.simIndex >= this.routeCoords.length - 1) {
+        this.stopSimulation();
         return;
       }
 
+      const cur = this.routeCoords[this.simIndex];
+      const nxt = this.routeCoords[this.simIndex + 1];
+      const segDist = this.computeDistance(
+        [cur.lat, cur.lng],
+        [nxt.lat, nxt.lng]
+      );
+      if (this.segRemaining === 0) this.segRemaining = segDist;
 
-      const dist = this.computeDistance(lastPosition, current);
+      const step = speedMs * (tick / 1000);
+      const ratio = Math.min(step / this.segRemaining, 1);
 
-      const timeElapsed  = (currentTime - lastTime) / 1000;
-      const speed = dist / timeElapsed;
-      const speedLimit = this.currentConfig?.speedLimit ?? 100;
+      const newLat = cur.lat + (nxt.lat - cur.lat) * ratio;
+      const newLng = cur.lng + (nxt.lng - cur.lng) * ratio;
 
-
-      if (speed > speedLimit) {
-        console.warn(`Déplacement ignoré : vitesse ${speed.toFixed(2)} m/s > limite ${speedLimit} m/s`);
-        return;
+      this.segRemaining -= step;
+      if (this.segRemaining <= 0) {
+        this.simIndex++;
+        this.segRemaining = 0;
       }
 
-      this.totalDistance += dist;
-      const newMinedAmount = this.calculateCrypto(this.totalDistance);
+      const newPos: [number, number] = [newLat, newLng];
+      this.positionMarker!.setLatLng(newPos);
+      this.updatePath(newPos);
 
-      const minedDelta = newMinedAmount - this.minedAmount;
-      if (minedDelta >= 0.01) {
-        try {
-          await this.ethersService.mintISIMA(BigInt(Math.floor(minedDelta * 1e18)));
-          this.minedAmount = newMinedAmount;
-        } catch (e: any) {
-          console.error('Erreur lors du minage :', e.message);
-        }
-      }
-
-      lastPosition = current;
-      lastTime = currentTime;
-    });
+      this.totalDistance += step;
+      this.minedAmount   = this.calculateCrypto(this.totalDistance);
+    }, tick);
   }
 
-  stopTrip(): void {
-    if (this.watchSubscription) {
-      this.watchSubscription.unsubscribe();
-      this.watchSubscription = undefined;
-    }
-    this.tracking = false;
+  stopSimulation(): void {
+    this.simInterval && clearInterval(this.simInterval);
+    this.simInterval = null;
   }
 
-  computeDistance(p1: [number, number], p2: [number, number]): number {
+  newTrip(): void {
+    this.resetAll();
+  }
+
+  private resetAll() {
+    this.stopSimulation();
+    this.startPoint      = null;
+    this.destination     = null;
+    this.routeCoords     = [];
+    this.estimatedDistance = 0;
+    this.totalDistance   = 0;
+    this.minedAmount     = 0;
+
+    this.positionMarker && this.map.removeLayer(this.positionMarker);
+    this.pathPolyline   && this.map.removeLayer(this.pathPolyline);
+    this.routingControl && this.map.removeControl(this.routingControl);
+
+    this.positionMarker = null;
+    this.pathPolyline   = null;
+  }
+
+  private updatePath(pos: [number, number]) {
+    this.pathLatLngs.push(L.latLng(...pos));
+    this.pathPolyline!.setLatLngs(this.pathLatLngs);
+  }
+
+  private computeDistance(p1: [number, number], p2: [number, number]): number {
     const R = 6371000;
     const dLat = this.toRad(p2[0] - p1[0]);
     const dLon = this.toRad(p2[1] - p1[1]);
     const lat1 = this.toRad(p1[0]);
     const lat2 = this.toRad(p2[0]);
-
-    const a = Math.sin(dLat / 2) ** 2 +
+    const a =
+      Math.sin(dLat / 2) ** 2 +
       Math.sin(dLon / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
 
-  toRad(deg: number): number {
-    return deg * Math.PI / 180;
+  private toRad(deg: number): number {
+    return (deg * Math.PI) / 180;
   }
 
-  calculateCrypto(meters: number): number {
+  private calculateCrypto(meters: number): number {
     return meters / 1000;
   }
+
+  protected readonly faRoad = faRoad;
 }

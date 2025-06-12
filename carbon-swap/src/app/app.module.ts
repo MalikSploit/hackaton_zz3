@@ -14,6 +14,8 @@ import { HomeComponent } from './home/home.component';
 import { AboutComponent } from './about/about.component';
 import {FontAwesomeModule} from "@fortawesome/angular-fontawesome";
 import {HttpClientModule} from "@angular/common/http";
+import {MapsComponent} from "./maps/maps.component";
+import {EthersService} from "./wallet/ethers.service";
 
 @NgModule({
   declarations: [
@@ -24,7 +26,7 @@ import {HttpClientModule} from "@angular/common/http";
     LoginComponent,
     RegisterComponent,
     HomeComponent,
-    AboutComponent
+    AboutComponent,
   ],
   imports: [
     BrowserModule,
@@ -32,8 +34,9 @@ import {HttpClientModule} from "@angular/common/http";
     NgOptimizedImage,
     ReactiveFormsModule,
     HttpClientModule,
+    FontAwesomeModule
   ],
-  providers: [],
+  providers: [EthersService],
   bootstrap: [AppComponent]
 })
 export class AppModule { }
