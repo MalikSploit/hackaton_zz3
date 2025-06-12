@@ -1,6 +1,6 @@
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
-import { AuthService } from '../_services/auth_service';   // ← chemin corrigé
+import { AuthService } from '../_services/auth_service';
 
 @Component({
   selector: 'app-register',
@@ -50,7 +50,7 @@ export class RegisterComponent {
     const { name, email, password } = this.registerForm.value;
 
     this.auth.signup({ name, email, password }).subscribe({
-      next: () => (this.loading = false), // redirection faite dans le service
+      next: () => (this.loading = false),
       error: (err) => {
         this.loading = false;
         this.errorMsg = err.error?.error ?? 'Erreur inattendue';
