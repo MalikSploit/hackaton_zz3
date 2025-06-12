@@ -2,17 +2,17 @@
   <h3 class="text-3xl font-bold text-gray-800 text-center">
     Quel est votre mode de transport&nbsp;?
   </h3>
-  <div class="flex flex-wrap justify-center gap-6">
+  <div class="flex flex-wrap justify-center gap-4">
     <button
       *ngFor="let m of transportModes"
       (click)="selectMode(m)"
-      class="flex items-center gap-2 px-8 py-4 text-white rounded-2xl text-lg font-semibold shadow-lg transition transform hover:-translate-y-1"
+      class="flex items-center gap-2 px-4 py-2 text-white rounded-xl text-base font-semibold shadow transition transform hover:-translate-y-0.5"
       [ngClass]="{
         'bg-green-600 hover:bg-green-700': m === TransportMode.WALK,
         'bg-blue-600 hover:bg-blue-700': m === TransportMode.BIKE
       }"
     >
-      <fa-icon [icon]="TRANSPORT_CONFIG[m].icon" class="text-2xl"></fa-icon>
+      <fa-icon [icon]="TRANSPORT_CONFIG[m].icon" class="text-xl"></fa-icon>
       {{ TRANSPORT_CONFIG[m].label }}
     </button>
   </div>
@@ -58,7 +58,7 @@
     </div>
   </div>
 
-  <div id="map" class="flex-1 w-full mt-4 rounded-xl overflow-hidden shadow-xl"></div>
+  <div id="map" class="h-[500px] w-full max-w-5xl mx-auto mt-4 rounded-xl overflow-hidden shadow-xl"></div>
 
   <div class="mt-4 bg-white bg-opacity-90 backdrop-blur-md rounded-xl shadow-lg p-4 flex justify-center gap-6 mx-auto max-w-5xl">
     <button
