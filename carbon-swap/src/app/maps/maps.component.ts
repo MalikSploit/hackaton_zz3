@@ -16,6 +16,8 @@ import 'leaflet-routing-machine';
 
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import { EthersService } from '../wallet/ethers.service';
+import { GeolocationService } from '../mocks/geolocation.service';
+import { Subscription } from 'rxjs';
 
 export enum TransportMode {
   WALK = 'walk',
@@ -66,18 +68,28 @@ export class MapsComponent implements OnInit, OnDestroy {
   tracking = false;
   totalDistance = 0;
   minedAmount = 0;
-  watchId: number | null = null;
+
+  // Subscription to mock geolocation
+  watchSubscription?: Subscription;
 
   estimatedDistance = 0;
   estimatedCrypto = 0;
 
-  constructor(private ethersService: EthersService) {}
+  constructor(
+    private ethersService: EthersService,
+    private mockGeo: GeolocationService
+  ) {}
 
   ngOnInit(): void {}
 
   ngOnDestroy(): void {
-    if (this.watchId) navigator.geolocation.clearWatch(this.watchId);
-    if (this.routingControl) this.map.removeControl(this.routingControl);
+    if (this.watchSubscription) {
+      this.watchSubscription.unsubscribe();
+      this.watchSubscription = undefined;
+    }
+    if (this.routingControl) {
+      this.map.removeControl(this.routingControl);
+    }
   }
 
   get currentConfig() {
@@ -124,22 +136,17 @@ export class MapsComponent implements OnInit, OnDestroy {
       lineOptions: {
         styles: [{ color: '#6366f1', weight: 6, opacity: 0.8 }],
       },
-      autoRoute: true,
-      showAlternatives: true,
-      showDirections: true,
-      routeWhileDragging: true,
-      addWaypoints: true,
-      show: true,
+      routeWhileDragging: false,
+      addWaypoints: false,
+      show: false,
       createMarker: (i: number, wp: any) => {
-        const iconUrl = 'assets/marker.png';
-        const label = i === 0 ? 'Départ' : `Destination<br><small>${(this.estimatedDistance / 1000).toFixed(2)} km<br>${this.estimatedCrypto.toFixed(2)} ISIMA</small>`;
         return L.marker(wp.latLng, {
           icon: L.icon({
-            iconUrl,
+            iconUrl: i === 0 ? 'assets/marker-start.png' : 'assets/marker.png',
             iconSize: [30, 40],
             iconAnchor: [15, 40],
           })
-        }).bindPopup(`<b>${label}</b>`);
+        }).bindPopup(i === 0 ? '<b>Départ</b>' : '<b>Destination</b>');
       }
     }).addTo(this.map);
 
@@ -154,14 +161,23 @@ export class MapsComponent implements OnInit, OnDestroy {
     let lastPosition = this.currentPosition;
     let lastTime = Date.now();
 
-    this.watchId = navigator.geolocation.watchPosition(async (pos) => {
+    this.watchSubscription = this.mockGeo.watchPosition().subscribe(async (pos) => {
       const currentTime = Date.now();
       const current = [pos.coords.latitude, pos.coords.longitude] as [number, number];
+
+      if (lastPosition === null || lastTime === null) {
+        lastPosition = current;
+        lastTime = currentTime;
+        return;
+      }
+
+
       const dist = this.computeDistance(lastPosition, current);
 
-      const timeElapsed = (currentTime - lastTime) / 1000; // secondes
-      const speed = dist / timeElapsed; // m/s
+      const timeElapsed  = (currentTime - lastTime) / 1000;
+      const speed = dist / timeElapsed;
       const speedLimit = this.currentConfig?.speedLimit ?? 100;
+
 
       if (speed > speedLimit) {
         console.warn(`Déplacement ignoré : vitesse ${speed.toFixed(2)} m/s > limite ${speedLimit} m/s`);
@@ -187,9 +203,11 @@ export class MapsComponent implements OnInit, OnDestroy {
   }
 
   stopTrip(): void {
-    if (this.watchId) navigator.geolocation.clearWatch(this.watchId);
+    if (this.watchSubscription) {
+      this.watchSubscription.unsubscribe();
+      this.watchSubscription = undefined;
+    }
     this.tracking = false;
-    this.watchId = null;
   }
 
   computeDistance(p1: [number, number], p2: [number, number]): number {
@@ -199,8 +217,8 @@ export class MapsComponent implements OnInit, OnDestroy {
     const lat1 = this.toRad(p1[0]);
     const lat2 = this.toRad(p2[0]);
 
-    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-      Math.sin(dLon / 2) * Math.sin(dLon / 2) * Math.cos(lat1) * Math.cos(lat2);
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.sin(dLon / 2) ** 2 * Math.cos(lat1) * Math.cos(lat2);
     const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
     return R * c;
   }
