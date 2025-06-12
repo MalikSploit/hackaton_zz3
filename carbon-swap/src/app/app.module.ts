@@ -12,6 +12,7 @@ import { RegisterComponent } from './register/register.component';
 import {ReactiveFormsModule} from "@angular/forms";
 import { HomeComponent } from './home/home.component';
 import { AboutComponent } from './about/about.component';
+import {FontAwesomeModule} from "@fortawesome/angular-fontawesome";
 
 @NgModule({
   declarations: [

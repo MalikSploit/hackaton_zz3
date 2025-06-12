@@ -1,1 +1,68 @@
-<p>maps works!</p>
+<div *ngIf="!mode" class="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-8">
+  <h3 class="text-2xl font-semibold text-gray-800">Quel est votre mode de transport ?</h3>
+  <div class="flex flex-wrap justify-center gap-6">
+    <button
+      *ngFor="let transport of transportModes"
+      (click)="selectMode(transport)"
+      class="flex items-center gap-2 px-6 py-3 text-white rounded-xl text-lg font-medium transition"
+      [ngClass]="{
+        'bg-green-600 hover:bg-green-700': transport === TransportMode.WALK,
+        'bg-blue-600 hover:bg-blue-700': transport === TransportMode.BIKE
+      }"
+    >
+      <fa-icon [icon]="TRANSPORT_CONFIG[transport].icon" class="text-xl"></fa-icon>
+      {{ TRANSPORT_CONFIG[transport].label }}
+    </button>
+  </div>
+</div>
+
+<!-- Interface principale après sélection -->
+<div *ngIf="mode && currentConfig" class="p-4 flex flex-col items-center space-y-6">
+  <!-- Infos trajet -->
+  <div class="flex flex-wrap items-center justify-center gap-4">
+    <div class="bg-white border border-gray-200 shadow px-5 py-2 rounded-md flex items-center gap-2 text-blue-800 text-sm font-medium">
+      <fa-icon [icon]="faMapMarker" class="text-blue-600"></fa-icon>
+      <span>{{ (totalDistance / 1000) | number: '1.2-2' }} km parcourus</span>
+    </div>
+    <div class="bg-white border border-gray-200 shadow px-5 py-2 rounded-md flex items-center gap-2 text-gray-800 text-sm font-medium">
+      <fa-icon [icon]="currentConfig.icon" class="text-lg"></fa-icon>
+      <span>{{ currentConfig.label }}</span>
+    </div>
+    <div *ngIf="tracking" class="bg-white border border-gray-200 shadow px-5 py-2 rounded-md flex items-center gap-2 text-green-700 text-sm font-medium">
+      <fa-icon [icon]="faCoins"></fa-icon>
+      <span>{{ minedAmount | number: '1.2-2' }} ISIMA</span>
+    </div>
+  </div>
+
+  <!-- Estimations -->
+  <div *ngIf="destination" class="flex items-center gap-4 text-sm text-gray-700">
+    <span>Distance estimée : {{ (estimatedDistance / 1000) | number: '1.2-2' }} km</span>
+    <span class="text-green-600 font-semibold">≈ {{ estimatedCrypto | number: '1.2-2' }} ISIMA</span>
+  </div>
+
+  <!-- Carte -->
+  <div class="relative w-full max-w-5xl rounded-xl overflow-hidden shadow border border-gray-300">
+    <div id="map" class="w-full h-[500px]"></div>
+  </div>
+
+  <!-- Boutons actions -->
+  <div class="flex gap-4">
+    <button
+      *ngIf="!tracking"
+      (click)="startTrip()"
+      class="bg-indigo-600 text-white px-5 py-3 rounded-md shadow hover:bg-indigo-700 transition text-lg font-semibold flex items-center gap-2"
+    >
+      <fa-icon [icon]="faPlayCircle"></fa-icon>
+      Démarrer un trajet
+    </button>
+
+    <button
+      *ngIf="tracking"
+      (click)="stopTrip()"
+      class="bg-red-600 text-white px-5 py-3 rounded-md shadow hover:bg-red-700 transition text-lg font-semibold flex items-center gap-2"
+    >
+      <fa-icon [icon]="faStopCircle"></fa-icon>
+      Arrêter le trajet
+    </button>
+  </div>
+</div>
