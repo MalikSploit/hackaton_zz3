@@ -7,66 +7,52 @@ import { parseUnits, formatUnits, isAddress } from 'ethers';
   templateUrl: './wallet.component.html',
 })
 export class WalletComponent implements OnInit {
-  isimaBalance   = '0';
-  transferTo     = '';
+  isimaBalance = '0';
+  transferTo = '';
   transferAmount = '';
-  busy           = false;
-
-  get userAddress(): string | null {
-    return this.eth.userAddress;
-  }
+  busy = false;
+  errorMessage: string | null = null;
 
   constructor(private eth: EthersService) {}
 
+  get userAddress() {
+    return this.eth.userAddress;
+  }
+
   async ngOnInit() {
     await this.eth.init();
-    await this.eth.watchTransfers(raw => {
-      this.isimaBalance = formatUnits(raw, 18);
-    });
+    await this.eth.faucetNativeIfEmpty(this.eth.userAddress!);
+    await this.eth.watchTransfers(b => (this.isimaBalance = formatUnits(b, 18)));
   }
 
   async onTransferISIMA(to: string, amountStr: string) {
     if (this.busy) return;
     to = to.trim();
     amountStr = amountStr.trim();
-    if (!to || !amountStr) {
-      this.showError('Veuillez renseigner une adresse et un montant.');
-      return;
-    }
-    if (!isAddress(to)) {
-      this.showError('Adresse Ethereum invalide.');
-      return;
-    }
-    const me = this.userAddress?.toLowerCase();
-    if (me && to.toLowerCase() === me) {
-      this.showError('Vous ne pouvez pas transférer de tokens à votre propre adresse.');
-      return;
-    }
+    if (!to || !amountStr) return this.showError('Adresse et montant requis.');
+    if (!isAddress(to)) return this.showError('Adresse Ethereum invalide.');
+    if (to.toLowerCase() === this.userAddress?.toLowerCase())
+      return this.showError('Impossible de transférer vers soi-même.');
+
     let amount: bigint;
     try {
       amount = parseUnits(amountStr, 18);
     } catch {
-      this.showError('Le format du montant est invalide.');
-      return;
+      return this.showError('Montant invalide.');
     }
-    if (amount <= 0n) {
-      this.showError('Le montant doit être supérieur à zéro.');
-      return;
-    }
-    const rawBal = await this.eth.getISIMABalance();
-    if (amount > rawBal) {
-      this.showError(`Solde insuffisant : vous avez ${formatUnits(rawBal, 18)} ISIMA.`);
-      return;
-    }
+    if (amount <= 0n) return this.showError('Montant > 0 requis.');
+
+    const bal = await this.eth.getISIMABalance();
+    if (amount > bal)
+      return this.showError(`Solde insuffisant : ${formatUnits(bal, 18)} ISIMA`);
 
     this.busy = true;
     try {
       const tx = await this.eth.transferISIMA(to, amount);
       await tx.wait();
       await this.refreshBalance();
-    } catch (err: any) {
-      console.error(err);
-      this.showError('Le transfert a échoué : ' + (err.message || err));
+    } catch (e: any) {
+      this.showError('Transfert échoué : ' + (e.message || e));
     } finally {
       this.busy = false;
     }
@@ -77,7 +63,6 @@ export class WalletComponent implements OnInit {
     this.isimaBalance = formatUnits(raw, 18);
   }
 
-  errorMessage: string | null = null;
   showError(msg: string) {
     this.errorMessage = msg;
   }
