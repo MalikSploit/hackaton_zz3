@@ -35,7 +35,7 @@ export class LoginComponent {
     const { email, password } = this.loginForm.value;
 
     this.auth.login({ email, password }).subscribe({
-      next: () => (this.loading = false), // redirection dans AuthService
+      next: () => (this.loading = false),
       error: (err) => {
         this.loading = false;
         this.errorMsg = err.error?.error ?? 'Identifiants invalides';

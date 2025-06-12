@@ -21,7 +21,7 @@ export class AuthService {
     return this.http
       .post<{ ok: true; user: User }>(`${this.api}/signup`, body, { withCredentials: true })
       .pipe(
-        map((res) => res.user),                 // ← on ne garde que user
+        map((res) => res.user),
         tap(() => this.router.navigate(['/wallet']))
       );
   }
