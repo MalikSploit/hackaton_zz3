@@ -1,5 +1,6 @@
 import { Component } from '@angular/core';
 import { FormBuilder, FormGroup, Validators } from '@angular/forms';
+import { AuthService } from '../_services/auth_service';   // ← chemin corrigé
 
 @Component({
   selector: 'app-register',
@@ -9,38 +10,51 @@ export class RegisterComponent {
   registerForm: FormGroup;
   loading = false;
   submitted = false;
-  showPwd = false;        // champ “password”
-  showConfirm = false;    // champ “confirm”
+  showPwd = false;
+  showConfirm = false;
+  errorMsg = '';
 
-  togglePwd(): void {
-    this.showPwd = !this.showPwd;
+  constructor(private fb: FormBuilder, private auth: AuthService) {
+    this.registerForm = this.fb.group(
+      {
+        name: ['', Validators.required],
+        email: ['', [Validators.required, Validators.email]],
+        password: ['', [Validators.required, Validators.minLength(6)]],
+        confirm: ['', Validators.required],
+      },
+      { validator: this.matchPasswords }
+    );
   }
 
-  toggleConfirm(): void {
-    this.showConfirm = !this.showConfirm;
+  // raccourci pour le template
+  get f() {
+    return this.registerForm.controls;
   }
 
-  constructor(private fb: FormBuilder) {
-    this.registerForm = this.fb.group({
-      name: ['', Validators.required],
-      email: ['', [Validators.required, Validators.email]],
-      password: ['', [Validators.required, Validators.minLength(6)]],
-      confirm: ['', Validators.required]
-    }, { validator: this.matchPasswords });
-  }
-
-  get f() { return this.registerForm.controls; }
-
+  /** Vérifie que password == confirm */
   matchPasswords(group: FormGroup) {
-    const p = group.get('password')!.value;
-    const c = group.get('confirm')!.value;
-    return p === c ? null : { notMatching: true };
+    return group.get('password')!.value === group.get('confirm')!.value
+      ? null
+      : { notMatching: true };
   }
+
+  togglePwd()     { this.showPwd = !this.showPwd; }
+  toggleConfirm() { this.showConfirm = !this.showConfirm; }
 
   onSubmit(): void {
     this.submitted = true;
+    this.errorMsg  = '';
     if (this.registerForm.invalid) return;
+
     this.loading = true;
-    // TODO: appeler le service d’enregistrement
+    const { name, email, password } = this.registerForm.value;
+
+    this.auth.signup({ name, email, password }).subscribe({
+      next: () => (this.loading = false), // redirection faite dans le service
+      error: (err) => {
+        this.loading = false;
+        this.errorMsg = err.error?.error ?? 'Erreur inattendue';
+      },
+    });
   }
 }
