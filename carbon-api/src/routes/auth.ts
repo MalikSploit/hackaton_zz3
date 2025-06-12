@@ -1,60 +1,73 @@
-import { Router, Request, Response, RequestHandler } from 'express';
-import { SiweMessage } from 'siwe';
+import { Router, RequestHandler } from 'express';
+import bcrypt from 'bcrypt';
 import { db, User } from '../db';
-import { ethers } from 'ethers';
-import { Session } from 'express-session';
-
-interface SessionExt extends Session { nonce?: string; userId?: number; }
-interface Req extends Request { session: SessionExt; }
 
 const router = Router();
 
-// router.get('/nonce', (req: Req, res: Response): void => {
-//     req.session.nonce = ethers.hexlify(ethers.randomBytes(8));
-//     res.json({ nonce: req.session.nonce });
-// });
-//
-// router.post('/login', async (req: Req, res: Response): Promise<void> => {
-//     const { message, signature, firstName, lastName, email } = req.body;
-//     try {
-//         const { success, data } = await new SiweMessage(message).verify({
-//             signature,
-//             nonce: req.session.nonce,
-//             time: new Date().toISOString()
-//         });
-//         if (!success) throw new Error('Signature invalide');
-//
-//         let user = db.prepare('SELECT * FROM users WHERE address = ?').get(data.address) as User | undefined;
-//         if (!user) {
-//             db.prepare('INSERT INTO users (address, first_name, last_name, email) VALUES (?,?,?,?)').run(
-//                 data.address,
-//                 firstName,
-//                 lastName,
-//                 email
-//             );
-//             user = db.prepare('SELECT * FROM users WHERE address = ?').get(data.address) as User;
-//         }
-//
-//         req.session.userId = user.id;
-//         res.json({ ok: true, user });
-//     } catch (e: any) {
-//         res.status(400).json({ ok: false, error: e.message });
-//     }
-// });
+const signup: RequestHandler = async (req, res) => {
+    const { name, email, password } = req.body as Record<string, string>;
 
-const currentUser: RequestHandler = (req, res): void => {
-    const sess = req.session as SessionExt;
-    if (!sess.userId) {
-        res.status(401).json({ ok: false });
+    if (!name || !email || !password) {
+        res.status(400).json({ ok: false, error: 'Champs manquants.' });
         return;
     }
-    const user = db.prepare('SELECT * FROM users WHERE id = ?').get(sess.userId) as User;
+
+    if (db.prepare('SELECT 1 FROM users WHERE email = ?').get(email)) {
+        res.status(409).json({ ok: false, error: 'Email déjà utilisé.' });
+        return;
+    }
+
+    const hash = await bcrypt.hash(password, 10);
+
+    const info = db
+        .prepare('INSERT INTO users (full_name, email, password) VALUES (?,?,?)')
+        .run(name.trim(), email.toLowerCase(), hash);
+
+    const user = db
+        .prepare('SELECT id, full_name, email, created_at FROM users WHERE id = ?')
+        .get(info.lastInsertRowid as number);
+
+    req.session.userId = info.lastInsertRowid as number;
     res.json({ ok: true, user });
 };
-router.get('/me', currentUser);
 
-router.post('/logout', (req: Req, res: Response): void => {
+router.post('/signup', signup);
+
+const login: RequestHandler = async (req, res) => {
+    const { email, password } = req.body as Record<string, string>;
+
+    if (!email || !password) {
+        res.status(400).json({ ok: false, error: 'Champs manquants.' });
+        return;
+    }
+
+    const user = db
+        .prepare('SELECT * FROM users WHERE email = ?')
+        .get(email.toLowerCase()) as User | undefined;
+
+    if (!user || !(await bcrypt.compare(password, user.password))) {
+        res.status(401).json({ ok: false, error: 'Identifiants invalides.' });
+        return;
+    }
+
+    req.session.userId = user.id;
+    const { password: _, ...safeUser } = user;
+    res.json({ ok: true, user: safeUser });
+};
+router.post('/login', login);
+
+router.get('/me', ((req, res) => {
+    if (!req.session.userId) return res.status(401).json({ ok: false });
+
+    const user = db
+        .prepare('SELECT id, full_name, email, created_at FROM users WHERE id = ?')
+        .get(req.session.userId) as Omit<User, 'password'>;
+
+    res.json({ ok: true, user });
+}) as RequestHandler);
+
+router.post('/logout', ((req, res) => {
     req.session.destroy(() => res.json({ ok: true }));
-});
+}) as RequestHandler);
 
 export default router;

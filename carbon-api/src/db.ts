@@ -1,20 +1,21 @@
 import Database from 'better-sqlite3';
+
 export const db = new Database('carbonswap.db');
 
-db.exec(`CREATE TABLE IF NOT EXISTS users (
-                                              id INTEGER PRIMARY KEY AUTOINCREMENT,
-                                              address TEXT UNIQUE,
-                                              first_name TEXT,
-                                              last_name TEXT,
-                                              email TEXT,
-                                              created_at TEXT DEFAULT CURRENT_TIMESTAMP
-         );`);
+db.exec(`
+    CREATE TABLE IF NOT EXISTS users (
+                                         id          INTEGER PRIMARY KEY AUTOINCREMENT,
+                                         full_name   TEXT    NOT NULL,
+                                         email       TEXT    UNIQUE NOT NULL,
+                                         password    TEXT    NOT NULL,
+                                         created_at  TEXT    DEFAULT CURRENT_TIMESTAMP
+    );
+`);
 
 export interface User {
     id: number;
-    address: string;
-    first_name: string;
-    last_name: string;
+    full_name: string;
     email: string;
+    password: string;
     created_at: string;
 }
