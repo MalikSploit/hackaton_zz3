@@ -6,12 +6,15 @@ import {
   faPlayCircle,
   faStopCircle,
   faWalking,
-  faRedoAlt, faRoad,
+  faRedoAlt,
+  faRoad,
 } from '@fortawesome/free-solid-svg-icons';
 import { IconDefinition } from '@fortawesome/fontawesome-svg-core';
 import * as L from 'leaflet';
 (window as any).L = L;
 import 'leaflet-routing-machine';
+
+import { EthersService } from '../wallet/ethers.service';
 
 export enum TransportMode {
   WALK = 'walk',
@@ -26,13 +29,13 @@ export const TRANSPORT_CONFIG: Record<
     label: 'À pied',
     icon: faWalking,
     color: 'green',
-    speedLimit: 1.8,
+    speedLimit: 20 / 3.6,
   },
   [TransportMode.BIKE]: {
     label: 'À vélo',
     icon: faBicycle,
     color: 'blue',
-    speedLimit: 10,
+    speedLimit: 36 / 3.6,
   },
 };
 
@@ -57,9 +60,11 @@ export class MapsComponent implements OnInit, OnDestroy {
   routingControl: any;
   startPoint: [number, number] | null = null;
   destination: [number, number] | null = null;
+  private startMarker: L.Marker | null = null;
+  private destMarker:  L.Marker | null = null;
   routeCoords: L.LatLng[] = [];
 
-  estimatedDistance = 0;  // en mètres
+  estimatedDistance = 0;
 
   positionMarker: L.Marker | null = null;
   pathPolyline:  L.Polyline | null = null;
@@ -70,17 +75,18 @@ export class MapsComponent implements OnInit, OnDestroy {
   private simIndex = 0;
   private segRemaining = 0;
 
-  totalDistance = 0;       // mètres
-  minedAmount   = 0;       // ISIMA
+  totalDistance = 0;
+  minedAmount   = 0;
+  private lastMintedKm = 0;
 
-  constructor() {}
+  constructor(private eth: EthersService) {}
 
   ngOnInit(): void {}
 
   ngOnDestroy(): void {
     this.stopSimulation();
     this.routingControl && this.map.removeControl(this.routingControl);
-    this.map.remove();
+    this.map && this.map.remove();
   }
 
   get currentConfig() {
@@ -120,27 +126,29 @@ export class MapsComponent implements OnInit, OnDestroy {
 
   private setStart(pt: [number, number]) {
     this.startPoint = pt;
-    this.positionMarker && this.map.removeLayer(this.positionMarker);
-    this.positionMarker = L.marker(pt, {
-      icon: L.icon({
-        iconUrl: 'assets/marker-start.png',
-        iconSize: [30, 40],
-        iconAnchor: [15, 40],
-      }),
+    if (this.startMarker) {
+      this.map.removeLayer(this.startMarker);
+    }
+    this.startMarker = L.marker(pt, {
+      icon: L.icon({ iconUrl: 'assets/marker-start.png', iconSize: [30,40], iconAnchor:[15,40] })
     })
       .addTo(this.map)
       .bindPopup('Départ')
       .openPopup();
+    if (this.destMarker) {
+      this.map.removeLayer(this.destMarker);
+      this.destMarker = null;
+      this.destination = null;
+    }
   }
 
   private setDestination(pt: [number, number]) {
     this.destination = pt;
-    L.marker(pt, {
-      icon: L.icon({
-        iconUrl: 'assets/marker.png',
-        iconSize: [30, 40],
-        iconAnchor: [15, 40],
-      }),
+    if (this.destMarker) {
+      this.map.removeLayer(this.destMarker);
+    }
+    this.destMarker = L.marker(pt, {
+      icon: L.icon({ iconUrl: 'assets/marker.png', iconSize: [30,40], iconAnchor:[15,40] })
     })
       .addTo(this.map)
       .bindPopup('Destination')
@@ -150,7 +158,6 @@ export class MapsComponent implements OnInit, OnDestroy {
   private drawRoute() {
     if (!this.startPoint || !this.destination) return;
     this.routingControl && this.map.removeControl(this.routingControl);
-
     this.routingControl = (L as any).Routing.control({
       waypoints: [
         L.latLng(...this.startPoint),
@@ -159,74 +166,74 @@ export class MapsComponent implements OnInit, OnDestroy {
       lineOptions: { styles: [{ color: '#6366f1', weight: 6, opacity: 0.8 }] },
       addWaypoints: false,
       show: false,
-    })
-      .addTo(this.map)
+    }).addTo(this.map)
       .on('routesfound', (e: any) => {
         this.routeCoords = e.routes[0].coordinates;
-        this.estimatedDistance = e.routes[0].summary.totalDistance;
+        this.estimatedDistance = e.routes[0].summary.totalDistance * 1.07;
       });
   }
 
-  startSimulation(): void {
+  get remainingKm(): number {
+    const rem = (this.estimatedDistance - this.totalDistance) / 1000;
+    return rem > 0 ? rem : 0;
+  }
+
+  async startSimulation(): Promise<void> {
     if (!this.startPoint || !this.destination || this.routeCoords.length === 0) {
       alert('Posez d’abord un départ puis une destination.');
       return;
     }
     this.stopSimulation();
-
     this.totalDistance = 0;
-    this.minedAmount   = 0;
-    this.simIndex      = 0;
-    this.segRemaining  = 0;
-
+    this.minedAmount = 0;
+    this.simIndex = 0;
+    this.segRemaining = 0;
     this.pathLatLngs = [L.latLng(...this.startPoint)];
-    this.pathPolyline && this.map.removeLayer(this.pathPolyline);
+    if (this.pathPolyline) this.map.removeLayer(this.pathPolyline);
     this.pathPolyline = L.polyline(this.pathLatLngs, {
       color: this.currentConfig.color,
       weight: 5,
       opacity: 0.7,
     }).addTo(this.map);
-
-    this.positionMarker!.setLatLng(this.startPoint);
-
+    if (this.positionMarker) this.map.removeLayer(this.positionMarker);
+    this.positionMarker = L.marker(this.startPoint, {
+      icon: L.icon({ iconUrl: 'assets/marker-moving.png', iconSize: [30, 40], iconAnchor: [15, 40] })
+    }).addTo(this.map);
     const tick = 1000;
-    this.simInterval = setInterval(() => {
+    this.simInterval = setInterval(async () => {
       const speedMs = this.speed / 3.6;
       if (speedMs > this.currentConfig.speedLimit) return;
-
       if (this.simIndex >= this.routeCoords.length - 1) {
-        this.stopSimulation();
+        clearInterval(this.simInterval);
+        this.simInterval = null;
+        const amountRaw = BigInt(Math.floor(this.totalDistance * 1e15));
+        if (amountRaw > 0n) {
+          const tx = await this.eth.mintISIMA(amountRaw);
+          await tx.wait();
+          this.minedAmount = this.totalDistance / 1000;
+        }
         return;
       }
-
       const cur = this.routeCoords[this.simIndex];
       const nxt = this.routeCoords[this.simIndex + 1];
-      const segDist = this.computeDistance(
-        [cur.lat, cur.lng],
-        [nxt.lat, nxt.lng]
-      );
+      const segDist = this.computeDistance([cur.lat, cur.lng], [nxt.lat, nxt.lng]);
       if (this.segRemaining === 0) this.segRemaining = segDist;
-
       const step = speedMs * (tick / 1000);
       const ratio = Math.min(step / this.segRemaining, 1);
-
       const newLat = cur.lat + (nxt.lat - cur.lat) * ratio;
       const newLng = cur.lng + (nxt.lng - cur.lng) * ratio;
-
       this.segRemaining -= step;
       if (this.segRemaining <= 0) {
         this.simIndex++;
         this.segRemaining = 0;
       }
-
       const newPos: [number, number] = [newLat, newLng];
       this.positionMarker!.setLatLng(newPos);
       this.updatePath(newPos);
-
       this.totalDistance += step;
-      this.minedAmount   = this.calculateCrypto(this.totalDistance);
     }, tick);
   }
+
 
   stopSimulation(): void {
     this.simInterval && clearInterval(this.simInterval);
@@ -239,19 +246,30 @@ export class MapsComponent implements OnInit, OnDestroy {
 
   private resetAll() {
     this.stopSimulation();
-    this.startPoint      = null;
-    this.destination     = null;
-    this.routeCoords     = [];
+    this.startPoint        = null;
+    this.destination       = null;
+    this.routeCoords       = [];
     this.estimatedDistance = 0;
-    this.totalDistance   = 0;
-    this.minedAmount     = 0;
+    this.totalDistance     = 0;
+    this.minedAmount       = 0;
+    this.lastMintedKm      = 0;
 
-    this.positionMarker && this.map.removeLayer(this.positionMarker);
-    this.pathPolyline   && this.map.removeLayer(this.pathPolyline);
-    this.routingControl && this.map.removeControl(this.routingControl);
-
-    this.positionMarker = null;
-    this.pathPolyline   = null;
+    if (this.startMarker) {
+      this.map.removeLayer(this.startMarker);
+      this.startMarker = null;
+    }
+    if (this.destMarker) {
+      this.map.removeLayer(this.destMarker);
+      this.destMarker = null;
+    }
+    if (this.pathPolyline) {
+      this.map.removeLayer(this.pathPolyline);
+      this.pathPolyline = null;
+    }
+    if (this.routingControl) {
+      this.map.removeControl(this.routingControl);
+      this.routingControl = null;
+    }
   }
 
   private updatePath(pos: [number, number]) {
@@ -274,10 +292,6 @@ export class MapsComponent implements OnInit, OnDestroy {
 
   private toRad(deg: number): number {
     return (deg * Math.PI) / 180;
-  }
-
-  private calculateCrypto(meters: number): number {
-    return meters / 1000;
   }
 
   protected readonly faRoad = faRoad;

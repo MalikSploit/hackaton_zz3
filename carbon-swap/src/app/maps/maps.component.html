@@ -29,7 +29,9 @@
       </div>
       <div class="flex flex-col items-center text-center">
         <fa-icon [icon]="faRoad" class="text-gray-600 text-3xl"></fa-icon>
-        <span class="mt-1 text-xl font-bold">{{ ((estimatedDistance - totalDistance)/1000) | number:'1.2-2' }}</span>
+        <span class="mt-1 text-xl font-bold">
+          {{ remainingKm | number:'1.2-2' }}
+        </span>
         <small class="text-gray-500">km restants</small>
       </div>
       <div class="flex flex-col items-center text-center">

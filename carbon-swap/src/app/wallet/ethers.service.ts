@@ -7,7 +7,7 @@ import {
 } from 'ethers';
 
 // Adresse & ABI du token ISIMA
-export const ISIMA_ADDRESS = '0xe7f1725E7734CE288F8367e1Bb143E90bb3F0512';
+export const ISIMA_ADDRESS = '0x5FbDB2315678afecb367f032d93F642f64180aa3';
 const ISIMA_ABI = [
   'function mint(uint256 amount)',
   'function balanceOf(address owner) view returns (uint256)',
@@ -84,10 +84,8 @@ export class EthersService implements OnDestroy {
     await this.initISIMA();
     const addr = this.userAddress!.toLowerCase();
 
-    // fetch initial
     cb(await this.getISIMABalance());
 
-    // subscribe
     this.transferListener = async (from: string, to: string, value: bigint) => {
       if (from.toLowerCase() === addr || to.toLowerCase() === addr) {
         cb(await this.getISIMABalance());
@@ -95,7 +93,6 @@ export class EthersService implements OnDestroy {
     };
     await this.isima!.on('Transfer', this.transferListener);
 
-    // on renvoie la fonction pour se désabonner
     return () => {
       if (this.isima && this.transferListener) {
         this.isima.off('Transfer', this.transferListener);
