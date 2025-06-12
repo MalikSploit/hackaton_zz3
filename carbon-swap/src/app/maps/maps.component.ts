@@ -54,7 +54,7 @@ export class MapsComponent implements OnInit, OnDestroy {
   faStopCircle = faStopCircle;
 
   mode: TransportMode | null = null;
-  transportModes = Object.values(TransportMode);
+  transportModes : TransportMode[] = Object.values(TransportMode);
   TRANSPORT_CONFIG = TRANSPORT_CONFIG;
   TransportMode = TransportMode;
 

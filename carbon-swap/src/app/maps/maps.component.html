@@ -16,7 +16,6 @@
   </div>
 </div>
 
-<!-- Interface principale après sélection -->
 <div *ngIf="mode && currentConfig" class="p-4 flex flex-col items-center space-y-6">
   <!-- Infos trajet -->
   <div class="flex flex-wrap items-center justify-center gap-4">
@@ -34,18 +33,15 @@
     </div>
   </div>
 
-  <!-- Estimations -->
   <div *ngIf="destination" class="flex items-center gap-4 text-sm text-gray-700">
     <span>Distance estimée : {{ (estimatedDistance / 1000) | number: '1.2-2' }} km</span>
     <span class="text-green-600 font-semibold">≈ {{ estimatedCrypto | number: '1.2-2' }} ISIMA</span>
   </div>
 
-  <!-- Carte -->
   <div class="relative w-full max-w-5xl rounded-xl overflow-hidden shadow border border-gray-300">
     <div id="map" class="w-full h-[500px]"></div>
   </div>
 
-  <!-- Boutons actions -->
   <div class="flex gap-4">
     <button
       *ngIf="!tracking"
