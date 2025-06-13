@@ -1,36 +1,46 @@
-<main class="bg-blue-50">
-  <section class="container mx-auto grid grid-cols-1 md:grid-cols-2 items-center gap-8 px-4 py-16">
-    <div class="order-1 md:order-2">
+<main class="bg-gradient-to-b from-blue-50 to-white min-h-screen">
+  <section class="container mx-auto grid grid-cols-1 md:grid-cols-2 items-center gap-12 px-6 py-20">
+    <div class="order-1 md:order-2 animate-fade-in-up [animation-delay:200ms]">
       <img
         ngSrc="assets/background.webp"
         alt="Illustration mobilité écologique"
-        class="w-full h-auto rounded-lg shadow-lg"
+        class="w-full h-auto rounded-2xl shadow-2xl ring-1 ring-blue-100"
         priority
         width="1792"
         height="1024"
       />
     </div>
-
-    <div class="order-2 md:order-1 text-center md:text-left">
-      <h1 class="text-5xl md:text-6xl font-extrabold text-blue-600 mb-4">
-        Bienvenue sur StepCoins
+    <div class="order-2 md:order-1 text-center md:text-left space-y-6 animate-fade-in-up [animation-delay:400ms]">
+      <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight leading-tight text-blue-700">
+        Bienvenue sur
+        <span class="bg-gradient-to-r from-blue-500 to-cyan-400 bg-clip-text text-transparent animate-gradient">
+        StepCoins
+      </span>
       </h1>
-      <p class="text-lg text-gray-700 mb-8">
-        Gagnez des ISIMA en marchant ou à vélo ! Accumulez des tokens web3 à
-        chaque pas, puis échangez-les contre de petits cadeaux dès que vous
-        atteignez un palier.
+
+
+      <p class="text-lg sm:text-xl text-gray-700 max-w-xl mx-auto md:mx-0">
+        Gagnez des <strong class="text-blue-600">ISIMA</strong> en marchant ou à vélo ! Accumulez des tokens Web3 à chaque pas, puis échangez-les contre des récompenses exclusives.
       </p>
 
-      <div class="flex flex-col sm:flex-row justify-center md:justify-start gap-4">
+      <p class="text-base text-gray-600 max-w-xl mx-auto md:mx-0 animate-fade-in-up [animation-delay:600ms]">
+        Chaque trajet compte. Plus vous bougez, plus vous gagnez. <br>Et le meilleur ? C’est bon pour vous et pour la planète ! 🌍
+      </p>
+
+      <p class="text-base text-gray-600 max-w-xl mx-auto md:mx-0 animate-fade-in-up [animation-delay:700ms]">
+        Connectez votre portefeuille, choisissez votre mode de déplacement et commencez à miner en temps réel.
+      </p>
+
+      <div class="flex flex-col sm:flex-row justify-center md:justify-start gap-4 pt-6 animate-fade-in-up [animation-delay:800ms]">
         <button
           routerLink="/wallet"
-          class="bg-blue-600 text-white px-6 py-3 rounded-lg hover:bg-blue-700 transition"
+          class="bg-blue-600 text-white text-lg px-6 py-3 rounded-xl hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-400 transition"
         >
           Voir mon solde
         </button>
         <button
           routerLink="/login"
-          class="bg-white border border-gray-300 text-gray-700 px-6 py-3 rounded-lg hover:bg-gray-100 transition"
+          class="bg-white border border-gray-300 text-gray-800 text-lg px-6 py-3 rounded-xl hover:bg-gray-100 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-300 transition"
         >
           Connexion / Inscription
         </button>
