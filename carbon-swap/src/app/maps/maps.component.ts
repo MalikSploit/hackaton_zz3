@@ -130,7 +130,7 @@ export class MapsComponent implements OnInit, OnDestroy {
       this.map.removeLayer(this.startMarker);
     }
     this.startMarker = L.marker(pt, {
-      icon: L.icon({ iconUrl: 'assets/marker-start.png', iconSize: [30,40], iconAnchor:[15,40] })
+      icon: L.icon({ iconUrl: 'assets/marker.png', iconSize: [30,40], iconAnchor:[15,40] })
     })
       .addTo(this.map)
       .bindPopup('Départ')
