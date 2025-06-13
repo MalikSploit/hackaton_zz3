@@ -1,27 +1,62 @@
-# CarbonSwap
+# 🌿 StepCoins — Application décentralisée Web3
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 16.2.2.
+**StepCoins** est une DApp (application décentralisée) développée avec **Angular 16**, intégrant des technologies Web3 comme **ethers.js**, **Leaflet** pour la cartographie, et **TailwindCSS** pour le style. 
 
-## Development server
+L'application vise à permettre l'échange, la visualisation ou la compensation de crédits carbone sur une infrastructure décentralisée.
 
-Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The application will automatically reload if you change any of the source files.
+| Catégorie          | Outil                                                             |
+|--------------------|--------------------------------------------------------------------|
+| Framework Frontend | [Angular 16](https://angular.io/)                                  |
+| Blockchain/Web3    | [Ethers.js](https://docs.ethers.org/) pour les interactions avec Ethereum |
+| Cartographie       | [Leaflet](https://leafletjs.com/), [Leaflet Routing Machine](https://www.liedman.net/leaflet-routing-machine/), [Leaflet.heat](https://github.com/Leaflet/Leaflet.heat) |
+| UI / CSS           | [Tailwind CSS](https://tailwindcss.com/)                           |
+| Icônes             | [Font Awesome](https://fontawesome.com/)                           |
+| Langage            | TypeScript                                                         |
+| Build/CLI          | Angular CLI, Webpack                                               |
 
-## Code scaffolding
+---
 
-Run `ng generate component component-name` to generate a new component. You can also use `ng generate directive|pipe|service|class|guard|interface|enum|module`.
+## Fonctionnalités principales
 
-## Build
+- Connexion au portefeuille Web3 (MetaMask, WalletConnect...)
+- Cartes interactives (routage, chaleur, données géographiques)
+- Gestion de tokens et appels à des smart contracts via ethers.js
+- Interface responsive et rapide grâce à Tailwind CSS
+- Tests unitaires avec Jasmine/Karma
 
-Run `ng build` to build the project. The build artifacts will be stored in the `dist/` directory.
+---
 
-## Running unit tests
+## Installation et lancement du projet
 
-Run `ng test` to execute the unit tests via [Karma](https://karma-runner.github.io).
+### Prérequis
 
-## Running end-to-end tests
+- Node.js v18+
+- npm
+- Angular CLI
 
-Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To use this command, you need to first add a package that implements end-to-end testing capabilities.
+```bash
+npm install -g @angular/cli
+```
 
-## Further help
+### Démarrage du projet 
 
-To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.io/cli) page.
+```bash
+back-end : script dev
+déployer un token : script deploy
+smart contract : script node (carbon-api)
+front-end : npm start
+```
+
+**Le front-end (``carbon-swap``) sera disponible sur le port : http://localhost:4200/** 
+
+**Le serveur (```carbin-api```) écoute sur le port 3000. (http://localhost:3000)**
+
+L'application utilise ethers.js pour :
+
+-  Se connecter à un portefeuille Web3 (MetaMask, etc.)
+
+- Lire et écrire dans un smart contract (ex : transfert de tokens, enregistrement de données)
+
+- Afficher des informations sur la blockchain (soldes, adresses, etc.)
+
+⚠️  N.B. : Les adresses de contrat et les ABI sont à configurer manuellement dans le code.
