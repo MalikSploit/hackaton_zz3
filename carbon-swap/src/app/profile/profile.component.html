@@ -1,0 +1,59 @@
+<div class="max-w-md mx-auto bg-white p-6 rounded shadow mt-8">
+  <h1 class="text-2xl font-bold mb-4 text-center">Mon Profil</h1>
+
+  <div *ngIf="user" class="space-y-4">
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Nom complet</label>
+      <p class="mt-1 text-gray-900">{{ user.full_name }}</p>
+    </div>
+    <div>
+      <label class="block text-sm font-medium text-gray-700">Email</label>
+      <p class="mt-1 text-gray-900">{{ user.email }}</p>
+    </div>
+
+    <hr class="my-4" />
+
+    <h2 class="text-lg font-semibold mb-2">Changer mon mot de passe</h2>
+    <form [formGroup]="form" (ngSubmit)="submit()" class="space-y-4">
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Mot de passe actuel</label>
+        <input type="password" formControlName="current"
+               class="w-full mt-1 border p-2 rounded"
+               [disabled]="busy"/>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Nouveau mot de passe</label>
+        <input type="password" formControlName="next"
+               class="w-full mt-1 border p-2 rounded"
+               [disabled]="busy"/>
+      </div>
+      <div>
+        <label class="block text-sm font-medium text-gray-700">Confirmer le nouveau mot de passe</label>
+        <input type="password" formControlName="confirm"
+               class="w-full mt-1 border p-2 rounded"
+               [disabled]="busy"/>
+      </div>
+
+      <div *ngIf="form.hasError('mismatch')" class="text-red-600 text-sm">
+        Les mots de passe ne correspondent pas.
+      </div>
+
+      <div *ngIf="error" class="text-red-700 bg-red-50 p-2 rounded">
+        {{ error }}
+      </div>
+      <div *ngIf="success" class="text-green-700 bg-green-50 p-2 rounded">
+        {{ success }}
+      </div>
+
+      <button type="submit"
+              class="w-full bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition disabled:opacity-50"
+              [disabled]="form.invalid || busy">
+        Mettre à jour
+      </button>
+    </form>
+  </div>
+
+  <div *ngIf="!user" class="text-center text-gray-500">
+    Chargement…
+  </div>
+</div>
