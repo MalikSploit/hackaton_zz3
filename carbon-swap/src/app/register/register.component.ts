@@ -26,12 +26,10 @@ export class RegisterComponent {
     );
   }
 
-  // raccourci pour le template
   get f() {
     return this.registerForm.controls;
   }
 
-  /** Vérifie que password == confirm */
   matchPasswords(group: FormGroup) {
     return group.get('password')!.value === group.get('confirm')!.value
       ? null
