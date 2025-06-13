@@ -196,8 +196,11 @@ export class MapsComponent implements OnInit, OnDestroy {
       opacity: 0.7,
     }).addTo(this.map);
     if (this.positionMarker) this.map.removeLayer(this.positionMarker);
+    const iconPath = this.mode === TransportMode.WALK
+      ? 'assets/walk.png'
+      : 'assets/bike.png';
     this.positionMarker = L.marker(this.startPoint, {
-      icon: L.icon({ iconUrl: 'assets/marker-moving.png', iconSize: [30, 40], iconAnchor: [15, 40] })
+      icon: L.icon({ iconUrl: iconPath, iconSize: [30, 40], iconAnchor: [15, 40] })
     }).addTo(this.map);
     const tick = 1000;
     this.simInterval = setInterval(async () => {
@@ -261,6 +264,10 @@ export class MapsComponent implements OnInit, OnDestroy {
     if (this.destMarker) {
       this.map.removeLayer(this.destMarker);
       this.destMarker = null;
+    }
+    if (this.positionMarker) {
+      this.map.removeLayer(this.positionMarker);
+      this.positionMarker = null;
     }
     if (this.pathPolyline) {
       this.map.removeLayer(this.pathPolyline);
