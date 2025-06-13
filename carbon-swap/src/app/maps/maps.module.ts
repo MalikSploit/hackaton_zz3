@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { MapsRoutingModule } from './maps-routing.module';
 import { MapsComponent } from './maps.component';
 import {FontAwesomeModule} from "@fortawesome/angular-fontawesome";
+import {FormsModule} from "@angular/forms";
 
 
 @NgModule({
@@ -13,7 +14,8 @@ import {FontAwesomeModule} from "@fortawesome/angular-fontawesome";
     imports: [
         CommonModule,
         MapsRoutingModule,
-        FontAwesomeModule
+        FontAwesomeModule,
+        FormsModule
     ]
 })
 export class MapsModule { }
