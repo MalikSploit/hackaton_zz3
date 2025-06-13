@@ -14,6 +14,7 @@ import {FontAwesomeModule} from "@fortawesome/angular-fontawesome";
 import {HttpClientModule} from "@angular/common/http";
 import {EthersService} from "./wallet/ethers.service";
 import { FooterComponent } from './shared/footer/footer.component';
+import { ProfileComponent } from './profile/profile.component';
 
 @NgModule({
   declarations: [
@@ -24,6 +25,7 @@ import { FooterComponent } from './shared/footer/footer.component';
     HomeComponent,
     AboutComponent,
     FooterComponent,
+    ProfileComponent,
   ],
   imports: [
     BrowserModule,

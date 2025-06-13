@@ -87,4 +87,15 @@ export class AuthService {
         })
       );
   }
+
+  changePassword(body: { next: string | null | undefined; current: string | null | undefined }) {
+    return this.http
+      .post<{ ok: boolean }>(`${this.api}/change-password`, body, { withCredentials: true })
+      .pipe(
+        map(res => {
+          if (!res.ok) throw new Error('Échec du changement de mot de passe');
+          return res;
+        })
+      );
+  }
 }
