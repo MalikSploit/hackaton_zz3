@@ -1,6 +1,7 @@
 import { Component, OnInit } from '@angular/core';
 import { EthersService } from './ethers.service';
 import { parseUnits, formatUnits, isAddress } from 'ethers';
+import { faWallet, faAddressCard, faCoins, faPaperPlane, faExclamationTriangle } from '@fortawesome/free-solid-svg-icons';
 
 @Component({
   selector: 'app-wallet',
@@ -12,6 +13,12 @@ export class WalletComponent implements OnInit {
   transferAmount = '';
   busy = false;
   errorMessage: string | null = null;
+
+  faWallet = faWallet;
+  faAddressCard = faAddressCard;
+  faCoins = faCoins;
+  faPaperPlane = faPaperPlane;
+  faExclamationTriangle = faExclamationTriangle;
 
   constructor(private eth: EthersService) {}
 

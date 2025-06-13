@@ -4,6 +4,7 @@ import { CommonModule } from '@angular/common';
 import { WalletRoutingModule } from './wallet-routing.module';
 import { WalletComponent } from './wallet.component';
 import {FormsModule} from "@angular/forms";
+import {FontAwesomeModule} from "@fortawesome/angular-fontawesome";
 
 
 @NgModule({
@@ -13,7 +14,8 @@ import {FormsModule} from "@angular/forms";
     imports: [
         CommonModule,
         WalletRoutingModule,
-        FormsModule
+        FormsModule,
+        FontAwesomeModule
     ]
 })
 export class WalletModule { }
