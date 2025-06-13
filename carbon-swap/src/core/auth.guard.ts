@@ -8,7 +8,7 @@ import {
   UrlSegment,
   Router,
 } from '@angular/router';
-import { AuthService } from './auth.service';
+import { AuthService } from '../app/_services/auth_service';
 
 function checkAuth(): boolean | ReturnType<Router['parseUrl']> {
   const auth   = inject(AuthService);
